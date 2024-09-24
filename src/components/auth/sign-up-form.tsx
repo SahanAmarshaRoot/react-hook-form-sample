@@ -3,7 +3,7 @@
 import * as React from 'react';
 import RouterLink from 'next/link';
 import { useRouter } from 'next/navigation';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { yupResolver } from '@hookform/resolvers/yup';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
@@ -16,33 +16,41 @@ import OutlinedInput from '@mui/material/OutlinedInput';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { Controller, useFieldArray, useForm } from 'react-hook-form';
-import { z as zod } from 'zod';
+import * as yup from 'yup';
 
 import { paths } from '@/paths';
 import { authClient } from '@/lib/auth/client';
 import { useUser } from '@/hooks/use-user';
 
-const schema = zod.object({
-  firstName: zod.string().min(1, { message: 'First name is required' }),
-  lastName: zod.string().min(1, { message: 'Last name is required' }),
-  email: zod.string().min(1, { message: 'Email is required' }).email(),
-  password: zod.string().min(6, { message: 'Password should be at least 6 characters' }),
-  contactNumbers: zod
-    .array(zod.string().min(1, { message: 'Contact number is required' }))
-    .min(1, { message: 'At least one contact number is required' }),
-  terms: zod.boolean().refine((value) => value, 'You must accept the terms and conditions'),
+const schema = yup.object({
+  firstName: yup.string().required('First name is required'),
+  lastName: yup.string().required('Last name is required'),
+  email: yup.string().required('Email is required').email(),
+  password: yup.string().required('Password is required').min(6, 'Password should need to be at least 6 characters'),
+  contactNumbers: yup
+    .array()
+    .of(yup.string().required('Contact number is required'))
+    .min(1, 'At least one contact number is required'),
+  terms: yup.boolean().oneOf([true], 'You must accept the terms and conditions'),
 });
 
-type Values = zod.infer<typeof schema>;
+interface Values {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  contactNumbers: string[];
+  terms: boolean;
+}
 
-const defaultValues = {
+const defaultValues: Values = {
   firstName: '',
   lastName: '',
   email: '',
   password: '',
-  contactNumbers: [''],
+  contactNumbers: [],
   terms: false,
-} satisfies Values;
+};
 
 export function SignUpForm(): React.JSX.Element {
   const router = useRouter();
@@ -56,9 +64,15 @@ export function SignUpForm(): React.JSX.Element {
     handleSubmit,
     setError,
     formState: { errors },
-  } = useForm<Values>({ defaultValues, resolver: zodResolver(schema) });
+  } = useForm<Values>({
+    defaultValues,
+    resolver: yupResolver(schema),
+  });
 
-  const { fields, append, remove } = useFieldArray({ control, name: 'contactNumbers' });
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'contactNumbers',
+  });
 
   const onSubmit = React.useCallback(
     async (values: Values): Promise<void> => {
