@@ -25,7 +25,7 @@ import { useUser } from '@/hooks/use-user';
 const schema = yup.object({
   firstName: yup.string().required('First name is required'),
   lastName: yup.string().required('Last name is required'),
-  email: yup.string().required('Email is required').email(),
+  email: yup.string().required('Email is required').email('Invalid email provided'),
   password: yup.string().required('Password is required').min(6, 'Password should need to be at least 6 characters'),
   contactNumbers: yup
     .array()
@@ -81,7 +81,11 @@ export function SignUpForm(): React.JSX.Element {
       const { error } = await authClient.signUp(values);
 
       if (error) {
-        setError('root', { type: 'server', message: error });
+        if (error?.code === 'EMAIL_EXISTS') {
+          setError('email', { type: 'server', message: error?.message });
+        } else {
+          setError('root', { type: 'server', message: error?.message });
+        }
         setIsPending(false);
         return;
       }
