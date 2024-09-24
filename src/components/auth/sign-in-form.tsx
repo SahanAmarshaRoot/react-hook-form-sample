@@ -3,7 +3,7 @@
 import * as React from 'react';
 import RouterLink from 'next/link';
 import { useRouter } from 'next/navigation';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { yupResolver } from '@hookform/resolvers/yup';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import FormControl from '@mui/material/FormControl';
@@ -16,20 +16,21 @@ import Typography from '@mui/material/Typography';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { EyeSlash as EyeSlashIcon } from '@phosphor-icons/react/dist/ssr/EyeSlash';
 import { Controller, useForm } from 'react-hook-form';
-import { z as zod } from 'zod';
+import * as yup from 'yup';
 
 import { paths } from '@/paths';
 import { authClient } from '@/lib/auth/client';
 import { useUser } from '@/hooks/use-user';
 
-const schema = zod.object({
-  email: zod.string().min(1, { message: 'Email is required' }).email(),
-  password: zod.string().min(1, { message: 'Password is required' }),
+const schema = yup.object({
+  email: yup.string().required('Email is required'),
+  password: yup.string().required('Password is required'),
 });
 
-type Values = zod.infer<typeof schema>;
-
-const defaultValues = { email: 'sofia@devias.io', password: 'Secret1' } satisfies Values;
+interface FromValues {
+  email: string;
+  password: string;
+}
 
 export function SignInForm(): React.JSX.Element {
   const router = useRouter();
@@ -45,10 +46,13 @@ export function SignInForm(): React.JSX.Element {
     handleSubmit,
     setError,
     formState: { errors },
-  } = useForm<Values>({ defaultValues, resolver: zodResolver(schema) });
+  } = useForm<FromValues>({
+    defaultValues: { email: 'sofia@devias.io', password: 'Secret1' },
+    resolver: yupResolver(schema),
+  });
 
   const onSubmit = React.useCallback(
-    async (values: Values): Promise<void> => {
+    async (values: FromValues): Promise<void> => {
       setIsPending(true);
 
       const { error } = await authClient.signInWithPassword(values);
